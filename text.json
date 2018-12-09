@@ -1,0 +1,25 @@
+{
+  "responseId": "210dcf26-7ef0-48fd-86ea-1c18e7444d90",
+  "queryResult": {
+    "queryText": "45830699W",
+    "action": "Autorizarvolante.Autorizarvolante-custom",
+    "parameters": { "dni": "45830699W" },
+    "allRequiredParamsPresent": true,
+    "fulfillmentMessages": [{ "text": { "text": [""] } }],
+    "outputContexts": [
+      {
+        "name": "projects/proyecto-hackathon/agent/sessions/1ea0a973-4b7b-ccce-e433-c32324c92101/contexts/autorizarvolante-followup",
+        "lifespanCount": 1,
+        "parameters": { "dni.original": "45830699W", "dni": "45830699W" }
+      }
+    ],
+    "intent": {
+      "name": "projects/proyecto-hackathon/agent/intents/5bba2cc7-7990-4931-99ff-6d1daf7fad3c",
+      "displayName": "Request_DNI"
+    },
+    "intentDetectionConfidence": 1,
+    "languageCode": "es"
+  },
+  "originalDetectIntentRequest": { "payload": {} },
+  "session": "projects/proyecto-hackathon/agent/sessions/1ea0a973-4b7b-ccce-e433-c32324c92101"
+}
