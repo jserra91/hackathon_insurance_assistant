@@ -44,7 +44,7 @@ const handlerWelcomeFunction = async function(agent) {
 	  title: 'Title: this is a title',
 	  buttons: new Button({
 		title: 'This is a button',
-		url: 'https://wwww.marca.com/',
+		url: 'https://www.marca.com/',
 	  }),
 	  image: new Image({
 		url: 'https://www.digital-salud.com/wp-content/uploads/2018/10/alexa3.jpg',
@@ -228,7 +228,10 @@ const indicarPrueba = async function(agent) {
   }
   
   try {
-
+	  
+	var ssml=false;
+	var mySSML=undefined;
+	
 	if (nivel== '01 - Autorizado'){
 
 		 conv.ask(
@@ -276,10 +279,13 @@ const indicarPrueba = async function(agent) {
 		
 		conv.ask(
 			new SimpleResponse({
-			speech: "tu tratmite se ha abierto con el id "+tramiteId,
-			text: "tu tratmite se ha abierto con el id "+tramiteId
+			speech: "tu tramite se ha abierto con número "+tramiteId,
+			text: "tu tramite se ha abierto con el número "+tramiteId
 		})
 		);
+		
+		ssml=true;
+		mySSML='<speak> tu tramite se ha abierto con número <say-as interpret-as="characters">'+tramiteId+'</say-as> </speak>';
 		
 		agent.setContext({
 				'name': 'provide_dni-followup',
@@ -296,6 +302,9 @@ const indicarPrueba = async function(agent) {
 
     let data = conv.serialize();
     console.log("data: %j", data);
+	if(ssml==true){
+		data.payload.google.richResponse.items[0].simpleResponse.ssml=mySSML;
+	}
     agent.add(new Payload("ACTIONS_ON_GOOGLE", data.payload.google));
   } catch (error) {
     console.log("---------indicarPrueba try error----------" + error);
@@ -315,6 +324,9 @@ const indicarVolante = async function(agent) {
 	attributesContext = agent.getContext('attributes');
   }
   try {
+		var ssml=false;
+		var mySSML=undefined;
+	
 		var autorizacionid=undefined;
 		
 		 await dbController
@@ -341,6 +353,10 @@ const indicarVolante = async function(agent) {
 		})
 		);
 		
+		ssml=true;
+		mySSML='<speak> tu autorización se ha abierto con el id <say-as interpret-as="characters">'+autorizacionid+'</say-as> </speak>';
+		
+		
 		agent.setContext({
 				'name': 'provide_dni-followup',
 				'lifespan': -1,
@@ -353,6 +369,9 @@ const indicarVolante = async function(agent) {
 		});
     let data = conv.serialize();
     console.log("data: %j", data);
+	if(ssml==true){
+		data.payload.google.richResponse.items[0].simpleResponse.ssml=mySSML;
+	}
     agent.add(new Payload("ACTIONS_ON_GOOGLE", data.payload.google));
   } catch (error) {
     console.log("---------indicarVolante try error----------" + error);
