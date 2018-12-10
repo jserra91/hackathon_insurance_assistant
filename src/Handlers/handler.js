@@ -12,7 +12,7 @@ const constants = require("../Utils/constants").getConstants();
 const _attributesClass = require("../Classes/attributes");
 const _deviceResponseClass = require("../Classes/deviceResponse");
 const { Payload, Text } = require("dialogflow-fulfillment");
-const { dialogflow, SimpleResponse } = require("actions-on-google");
+const { dialogflow, SimpleResponse, BasicCard, Button, Image} = require("actions-on-google");
 const dbController = require("../TWS/dbController");
 
 let _app = dialogflow();
@@ -21,15 +21,56 @@ let _deviceResponse = new _deviceResponseClass();
 let _display = false;
 
 const handlerWelcomeFunction = async function(agent) {
-  _display = false; //conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
   let conv = agent.conv();
 
   try {
     console.log("Intent: LaunchRequest INIT");
     conv.ask(
       new SimpleResponse({
-        speech: "hola",
-        text: "hola texto"
+        speech: "Bienvenido a SaludBot, tu Gestor de prestaciones médicas. ¿Podrías indicarnos tu DNI para consultar tu catálogo de prestaciones disponibles?",
+        text: "Bienvenido a SaludBot, tu Gestor de prestaciones médicas. ¿Podrías indicarnos tu DNI para consultar tu catálogo de prestaciones disponibles?"
+      })
+    );
+	
+	// Create a basic card
+	conv.ask(new BasicCard({
+	  text: `This is a basic card.  Text in a basic card can include "quotes" and
+	  most other unicode characters including emoji 📱.  Basic cards also support
+	  some markdown formatting like *emphasis* or _italics_, **strong** or
+	  __bold__, and ***bold itallic*** or ___strong emphasis___ as well as other
+	  things like line  \nbreaks`, // Note the two spaces before '\n' required for
+								   // a line break to be rendered in the card.
+	  subtitle: 'This is a subtitle',
+	  title: 'Title: this is a title',
+	  buttons: new Button({
+		title: 'This is a button',
+		url: 'https://wwww.marca.com/',
+	  }),
+	  image: new Image({
+		url: 'https://www.digital-salud.com/wp-content/uploads/2018/10/alexa3.jpg',
+		alt: 'Image alternate text',
+	  }),
+	  display: 'CROPPED',
+	}));
+
+    let data = conv.serialize();
+    console.log("data: %j", data);
+    agent.add(new Payload("ACTIONS_ON_GOOGLE", data.payload.google));
+  } catch (error) {
+    console.log("---------handlerWelcomeFunction try error----------" + error);
+    agent.add(constants.errorMessage);
+  }
+};
+
+const handlerGoodbyeFunction = async function(agent) {
+  let conv = agent.conv();
+
+  try {
+    console.log("Intent: handlerGoodbyeFunction INIT");
+    conv.close(
+      new SimpleResponse({
+        speech: "Gracias por utilizar Salud Bot.",
+        text: "Gracias por utilizar Salud Bot."
       })
     );
 
@@ -37,22 +78,25 @@ const handlerWelcomeFunction = async function(agent) {
     console.log("data: %j", data);
     agent.add(new Payload("ACTIONS_ON_GOOGLE", data.payload.google));
   } catch (error) {
-    console.log("---------LaunchRequest try error----------" + error);
+    console.log("---------handlerGoodbyeFunction try error----------" + error);
     agent.add(constants.errorMessage);
   }
 };
 
-const requestDNI = async function(agent) {
+const provideDNI = async function(agent) {
   _display = false; //conv.surface.capabilities.has('actions.capability.SCREEN_OUTPUT');
   let conv = agent.conv();
 
   try {
-    console.log("INIT :: requestDNI");
+    console.log("INIT :: provideDNI;");
 
     //Validar DNI
     const letras = "TRWAGMYFPDXBNJZSQVHLCKE";
-    const dni = conv.body.queryResult.parameters.dni;
-    console.log("INIT :: requestDNI :: dni -> " + dni);
+    var dni = conv.body.queryResult.parameters.dni;
+	dni=dni.replace(' ','');
+	
+    console.log("provideDNI :: dni -> " + dni);
+	
     let validado = false;
     // DNI de 9 digitos? Validar si es undefined o no
     if (!!dni && dni.length === 9) {
@@ -64,6 +108,7 @@ const requestDNI = async function(agent) {
       }
     }
 
+	var resultados;
     if (validado) {
       validado = false;
       console.log("INIT :: requestDNI valido :: dni -> " + dni);
@@ -76,11 +121,11 @@ const requestDNI = async function(agent) {
           if (result.Items.length > 0) {
             console.log("INIT :: requestDNI valido :: dni -> es valido");
             validado = true;
-            _attributes.resultados = result;
+            resultados = result;
           } else {
             console.log("INIT :: requestDNI valido :: dni -> no es valido");
             validado = false;
-            _attributes.resultados = [];
+            resultados = [];
           }
         })
         .catch(error => {
@@ -104,7 +149,19 @@ const requestDNI = async function(agent) {
             "Que desea autorizar? una endoscopia, analisis de sangre o una operación"
         })
       );
-    } else {
+	  
+	  
+	agent.setContext({
+		'name': 'attributes',
+		'lifespan': 99,
+		'parameters': {
+			'attributes': {
+				'resultados':resultados
+			}
+		}
+	});
+
+  } else {
       console.log("INIT :: requestDNI FINAL :: dni -> no es valido");
       // DNI Invalido
       conv.ask(
@@ -113,6 +170,12 @@ const requestDNI = async function(agent) {
           text: "El Numero de documento es invalido"
         })
       );
+	  
+		agent.setContext({
+			'name': 'provide_dni-followup',
+			'lifespan': -1,
+			'parameters': {}
+		});
     }
 
     // serializar
@@ -124,6 +187,179 @@ const requestDNI = async function(agent) {
     agent.add(constants.errorMessage);
   }
 };
+
+
+const indicarPrueba = async function(agent) {
+  console.log("Intent: indicarPrueba INIT");
+  let conv = agent.conv();
+
+  var prueba = conv.body.queryResult.parameters.Prueba_medica;
+  console.log("Intent: indicarPrueba "+prueba);
+  let attributesContext=undefined;
+  
+  if (agent.contexts != undefined) {
+	attributesContext = agent.getContext('attributes');
+  }
+ 
+  console.log("mis atributos %j",attributesContext);
+  var nivel=undefined;
+  var found=false;
+  
+  for(var i = 0; i < attributesContext.parameters.attributes.resultados.Items[0].simple.length;i++){
+	if (attributesContext.parameters.attributes.resultados.Items[0].simple[i] == prueba){
+		nivel = '01 - Autorizado';
+		found=true;
+		break;
+	}
+  }
+  
+  if(found==false){
+	  for(var i = 0; i < attributesContext.parameters.attributes.resultados.Items[0].media.length;i++){
+		if (attributesContext.parameters.attributes.resultados.Items[0].media[i] == prueba){
+			nivel = '02 - Simple';
+			found=true;
+			break;
+		}
+	  }
+  }
+  
+  if(found==false){
+	  nivel = '03 - Compleja'
+  }
+  
+  try {
+
+	if (nivel== '01 - Autorizado'){
+
+		 conv.ask(
+		  new SimpleResponse({
+			speech: "No es necesario autorizar esta prestación, pertenece al catálogo de servicios básicos. ¿Qué más necesitas?.",
+			text: "No es necesario autorizar esta prestación, pertenece al catálogo de servicios básicos. ¿Qué más necesitas?."
+		  })
+		);
+		agent.setContext({
+				'name': 'provide_dni-followup',
+				'lifespan': -1,
+				'parameters': {}
+			});		
+		agent.setContext({
+			'name': 'provide_dni-indicarprueba-followup',
+			'lifespan': -1,
+			'parameters': {}
+		});
+	}else if (nivel== '02 - Simple'){
+		 conv.ask(
+		  new SimpleResponse({
+			speech: "Podrías indicarme el número del volante",
+			text: "Podrías indicarme el número del volante"
+		  })
+		);
+    }else {		
+		var tramiteId=undefined;
+		
+		 await dbController
+			.inserTramite(prueba, attributesContext)
+			.then(result => {
+			  console.log(
+				"result in then dbController: " + JSON.stringify(result, null, 4)
+			  );
+			  tramiteId=result.id;
+			  
+			})
+			.catch(error => {
+			  console.log("error en StopRequestFunction2 function " + error);
+			  return Promise.reject(
+				(_response.errorMessage = constants.errorMessage)
+			  );
+			});
+	
+		
+		conv.ask(
+			new SimpleResponse({
+			speech: "tu tratmite se ha abierto con el id "+tramiteId,
+			text: "tu tratmite se ha abierto con el id "+tramiteId
+		})
+		);
+		
+		agent.setContext({
+				'name': 'provide_dni-followup',
+				'lifespan': -1,
+				'parameters': {}
+			});		
+		agent.setContext({
+			'name': 'provide_dni-indicarprueba-followup',
+			'lifespan': -1,
+			'parameters': {}
+		});
+    }	
+		
+
+    let data = conv.serialize();
+    console.log("data: %j", data);
+    agent.add(new Payload("ACTIONS_ON_GOOGLE", data.payload.google));
+  } catch (error) {
+    console.log("---------indicarPrueba try error----------" + error);
+    agent.add(constants.errorMessage);
+  }
+};
+
+const indicarVolante = async function(agent) {
+ console.log("Intent: indicarVolante INIT");
+  let conv = agent.conv();
+
+  var volante = conv.body.queryResult.parameters.number;
+  console.log("Intent: indicarVolante "+volante);
+  let attributesContext=undefined;
+
+  if (agent.contexts != undefined) {
+	attributesContext = agent.getContext('attributes');
+  }
+  try {
+		var autorizacionid=undefined;
+		
+		 await dbController
+			.insertAutorizacion(volante, attributesContext)
+			.then(result => {
+			  console.log(
+				"result in then dbController: " + JSON.stringify(result, null, 4)
+			  );
+			  autorizacionid=result.id;
+			  
+			})
+			.catch(error => {
+			  console.log("error en StopRequestFunction2 function " + error);
+			  return Promise.reject(
+				(_response.errorMessage = constants.errorMessage)
+			  );
+			});
+	
+		
+		conv.ask(
+			new SimpleResponse({
+			speech: "tu autorización se ha abierto con el id "+autorizacionid,
+			text: "tu autorización se ha abierto con el id "+autorizacionid
+		})
+		);
+		
+		agent.setContext({
+				'name': 'provide_dni-followup',
+				'lifespan': -1,
+				'parameters': {}
+			});		
+		agent.setContext({
+			'name': 'provide_dni-indicarprueba-followup',
+			'lifespan': -1,
+			'parameters': {}
+		});
+    let data = conv.serialize();
+    console.log("data: %j", data);
+    agent.add(new Payload("ACTIONS_ON_GOOGLE", data.payload.google));
+  } catch (error) {
+    console.log("---------indicarVolante try error----------" + error);
+    agent.add(constants.errorMessage);
+  }
+};
+
 
 const RequestVolante = async function(agent) {
   let conv = agent.conv();
@@ -1203,10 +1439,14 @@ const stopIntentsHandlerFunction = async function(agent) {
 };
 
 module.exports.handlerWelcomeFunction = handlerWelcomeFunction;
+module.exports.handlerGoodbyeFunction = handlerGoodbyeFunction;
+module.exports.provideDNI = provideDNI;
+module.exports.indicarPrueba = indicarPrueba;
+module.exports.indicarVolante = indicarVolante;
+
 module.exports.helpFunction = helpFunction;
 module.exports.genericHandlerFunction = genericHandlerFunction;
 module.exports.handlerQueEsDatoFunction = handlerQueEsDatoFunction;
 module.exports.futureIntentsHandlerFunction = futureIntentsHandlerFunction;
 module.exports.stopIntentsHandlerFunction = stopIntentsHandlerFunction;
-module.exports.requestDNI = requestDNI;
 module.exports.RequestVolante = RequestVolante;

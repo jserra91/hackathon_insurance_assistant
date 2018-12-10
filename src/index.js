@@ -70,15 +70,14 @@ function processRequest(request, response) {
     const agent = new WebhookClient({ request, response });
     let intentMap = new Map();
     intentMap.set("Default Welcome Intent", handlers.handlerWelcomeFunction);
-    intentMap.set("Request_DNI", handlers.requestDNI);
-    intentMap.set("RequestVolante", handlers.RequestVolante);
-
-    // Intents con formato:  =>  intentMap.set('',handlers.);
-
+	intentMap.set("Despedida", handlers.handlerGoodbyeFunction);
+	intentMap.set("Provide_DNI", handlers.provideDNI);
+	intentMap.set("Provide_DNI - indicarPrueba", handlers.indicarPrueba);
+	intentMap.set("Provide_DNI - indicarPrueba - indicarVolante", handlers.indicarVolante);
+	
     agent.requestSource = "ACTIONS_ON_GOOGLE";
     agent.handleRequest(intentMap);
 
-    // console.log("processRequest end %j", response);
   } catch (error) {
     console.log("---------processRequest try error----------" + error);
     return response.status(400).json({
