@@ -16,7 +16,7 @@
     "@google-cloud/datastore": "^2.0.0",
     "actions-on-google": "^2.5.0",
     "ask-sdk": "^2.3.0",
-    "aws-sdk": "^2.362.0",
+    "aws-sdk": "^2.1368.0",
     "body-parser": "^1.17.2",
     "dialogflow": "^0.7.0",
     "dialogflow-fulfillment": "^0.5.0",
